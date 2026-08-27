@@ -4,7 +4,7 @@
   "devCommand": "next dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
   "rewrites": [
     {
       "source": "/api/(.*)",
