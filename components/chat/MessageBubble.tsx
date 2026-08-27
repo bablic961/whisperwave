@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { ContextMenu } from '@/shared/ContextMenu';
 
 function formatTimeAgo(date: Date | string): string {
   const d = new Date(date);

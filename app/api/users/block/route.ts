@@ -17,9 +17,16 @@ export async function POST(request: NextRequest) {
 
     const blockerId = 'current-user-id';
 
+    if (!userId) {
+      return NextResponse.json(
+        { error: { code: 'MISSING_USER_ID', message: 'Не указан ID пользователя' } },
+        { status: 400 }
+      );
+    }
+
     // Check if already blocked
     const existingBlock = await prisma.blockedUser.findFirst({
-      where: { blockerId, blockedId: userId },
+      where: { blockerId: blockerId || '', blockedId: userId || '' },
     });
 
     if (existingBlock) {
@@ -31,9 +38,9 @@ export async function POST(request: NextRequest) {
 
     const block = await prisma.blockedUser.create({
       data: {
-        blockerId,
-        blockedId: userId,
-        reason,
+        blockerId: blockerId || '',
+        blockedId: userId || '',
+        reason: reason || undefined,
       },
     });
 
@@ -62,8 +69,15 @@ export async function DELETE(request: NextRequest) {
 
     const blockerId = 'current-user-id';
 
+    if (!userId) {
+      return NextResponse.json(
+        { error: { code: 'MISSING_USER_ID', message: 'Не указан ID пользователя' } },
+        { status: 400 }
+      );
+    }
+
     await prisma.blockedUser.deleteMany({
-      where: { blockerId, blockedId: userId },
+      where: { blockerId: blockerId || '', blockedId: userId || '' },
     });
 
     return NextResponse.json({ success: true });
@@ -89,7 +103,7 @@ export async function GET(request: NextRequest) {
     const blockerId = 'current-user-id';
 
     const blockedUsers = await prisma.blockedUser.findMany({
-      where: { blockerId },
+      where: { blockerId: blockerId || '' },
       include: {
         blocked: {
           select: {

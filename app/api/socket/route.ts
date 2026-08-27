@@ -1,7 +1,6 @@
 // app/api/socket/route.ts - WebSocket endpoint
 import { NextRequest, NextResponse } from 'next/server';
-import { getSocketIO } from '@/lib/socket';
-import { createServer } from 'http';
+import { getIO } from '@/lib/socket';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,18 +9,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Expected WebSocket' }, { status: 426 });
   }
 
-  // Get or create socket.io server
-  const server = createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('WebSocket server is running');
-  });
-
-  const { io } = await import('@/lib/socket');
-  const socketIO = getSocketIO(server);
+  const io = getIO();
 
   return NextResponse.json({
     success: true,
     message: 'WebSocket server initialized',
+    ioReady: !!io,
   });
 }
 

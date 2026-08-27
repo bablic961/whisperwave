@@ -74,7 +74,7 @@ export async function PUT(request: NextRequest) {
 
     // Check permissions
     const userMember = await prisma.chatMember.findFirst({
-      where: { chatId, userId, role: { in: ['owner', 'admin'] } },
+      where: { chatId: chatId || '', userId: userId || '', role: { in: ['owner', 'admin'] } },
     });
 
     if (!userMember) {
@@ -85,13 +85,13 @@ export async function PUT(request: NextRequest) {
     }
 
     const chat = await prisma.chat.update({
-      where: { id: chatId },
+      where: { id: chatId || '' },
       data: {
-        name,
-        description,
-        avatar,
-        coverImage,
-        slowMode: settings?.slowMode,
+        name: name || undefined,
+        description: description || undefined,
+        avatar: avatar || undefined,
+        coverImage: coverImage || undefined,
+        slowMode: settings?.slowMode || undefined,
       },
     });
 
@@ -122,7 +122,7 @@ export async function DELETE(request: NextRequest) {
 
     // Check permissions
     const userMember = await prisma.chatMember.findFirst({
-      where: { chatId, userId, role: 'owner' },
+      where: { chatId: chatId || '', userId: userId || '', role: 'owner' },
     });
 
     if (!userMember) {
@@ -133,7 +133,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     await prisma.chat.delete({
-      where: { id: chatId },
+      where: { id: chatId || '' },
     });
 
     return NextResponse.json({ success: true });

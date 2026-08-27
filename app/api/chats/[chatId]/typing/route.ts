@@ -2,7 +2,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // In-memory typing state (in production, use Redis)
-const typingState: Record<string, Record<string, { expiresAt: number }>> = {};
+interface TypingUser {
+  expiresAt: number;
+}
+interface TypingState {
+  [chatId: string]: {
+    [userId: string]: TypingUser;
+  };
+}
+const typingState: TypingState = {};
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,18 +30,20 @@ export async function POST(request: NextRequest) {
 
     const userId = 'current-user-id';
 
-    if (typingState[chatId]) {
-      if (isTyping) {
-        typingState[chatId][userId] = {
-          expiresAt: Date.now() + 5000, // 5 seconds
+    if (chatId) {
+      if (typingState[chatId]) {
+        if (isTyping) {
+          typingState[chatId][userId] = {
+            expiresAt: Date.now() + 5000, // 5 seconds
+          };
+        } else {
+          delete typingState[chatId][userId];
+        }
+      } else if (isTyping) {
+        typingState[chatId] = {
+          [userId]: { expiresAt: Date.now() + 5000 },
         };
-      } else {
-        delete typingState[chatId][userId];
       }
-    } else if (isTyping) {
-      typingState[chatId] = {
-        [userId]: { expiresAt: Date.now() + 5000 },
-      };
     }
 
     return NextResponse.json({ success: true });
@@ -52,7 +62,7 @@ export async function GET(request: NextRequest) {
     const chatId = searchParams.get('chatId');
 
     // Clean expired typing states
-    if (typingState[chatId]) {
+    if (chatId && typingState[chatId]) {
       const now = Date.now();
       Object.keys(typingState[chatId]).forEach((userId) => {
         if (typingState[chatId][userId].expiresAt < now) {
@@ -66,7 +76,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      typingUsers: Object.keys(typingState[chatId] || {}),
+      typingUsers: chatId ? Object.keys(typingState[chatId] || {}) : [],
     });
   } catch (error) {
     console.error('Get typing error:', error);

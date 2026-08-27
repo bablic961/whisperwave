@@ -14,6 +14,7 @@ interface Chat {
   unreadCount: number;
   membersCount: number;
   lastMessageAt: string;
+  isOnline?: boolean;
 }
 
 export default function ChatListPage() {
@@ -49,9 +50,19 @@ export default function ChatListPage() {
     },
   ];
 
+  const handleChatSelect = (chatId: string) => {
+    // Navigate to chat
+    console.log('Selected chat:', chatId);
+  };
+
+  const handleSearch = (query: string) => {
+    // Filter chats
+    console.log('Search query:', query);
+  };
+
   return (
     <div className="flex h-screen overflow-hidden">
-      <ChatSidebar chats={chats} />
+      <ChatSidebar chats={chats} onChatSelect={handleChatSelect} onSearch={handleSearch} />
     </div>
   );
 }

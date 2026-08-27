@@ -15,7 +15,7 @@ export function AnimatedLogo({ className = '', size = 40 }: AnimatedLogoProps) {
     if (!svgRef.current) return;
 
     const path = svgRef.current.querySelector('.wave-path');
-    if (path) {
+    if (path && path instanceof HTMLElement) {
       path.style.animation = 'wave 3s ease-in-out infinite';
     }
   }, []);

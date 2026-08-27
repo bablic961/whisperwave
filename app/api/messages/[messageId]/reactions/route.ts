@@ -2,13 +2,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+const VALID_REACTION_TYPES = ['LIKE', 'LOVE', 'HAHA', 'WOW', 'SAD', 'ANGRY', 'CELEBRATE', 'THINKING', 'CRYING', 'CLAPPING'];
+
 export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const messageId = searchParams.get('messageId');
 
+    if (!messageId) {
+      return NextResponse.json(
+        { error: { code: 'MISSING_MESSAGE_ID', message: 'Не указан ID сообщения' } },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { type } = body;
+
+    if (!type || !VALID_REACTION_TYPES.includes(type)) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_REACTION_TYPE', message: 'Неверный тип реакции' } },
+        { status: 400 }
+      );
+    }
 
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
@@ -22,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Check if reaction already exists
     const existingReaction = await prisma.reaction.findFirst({
-      where: { messageId, userId, type },
+      where: { messageId: messageId, userId, type: type as any },
     });
 
     if (existingReaction) {
@@ -36,7 +52,7 @@ export async function POST(request: NextRequest) {
       data: {
         messageId,
         userId,
-        type,
+        type: type as any,
       },
     });
 
@@ -66,6 +82,20 @@ export async function DELETE(request: NextRequest) {
     const messageId = searchParams.get('messageId');
     const type = searchParams.get('type');
 
+    if (!messageId) {
+      return NextResponse.json(
+        { error: { code: 'MISSING_MESSAGE_ID', message: 'Не указан ID сообщения' } },
+        { status: 400 }
+      );
+    }
+
+    if (!type || !VALID_REACTION_TYPES.includes(type)) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_REACTION_TYPE', message: 'Неверный тип реакции' } },
+        { status: 400 }
+      );
+    }
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return NextResponse.json(
@@ -78,7 +108,7 @@ export async function DELETE(request: NextRequest) {
 
     const reaction = await prisma.reaction.delete({
       where: {
-        messageId_userId_type: { messageId, userId, type },
+        messageId_userId_type: { messageId, userId, type: type as any },
       },
     });
 

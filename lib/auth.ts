@@ -22,13 +22,13 @@ export function generateTokens(userId: string, email: string, role: string = 'US
   const accessToken = jwt.sign(
     { userId, email, role },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
   );
 
   const refreshToken = jwt.sign(
     { userId, email, role },
     JWT_SECRET,
-    { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
+    { expiresIn: REFRESH_TOKEN_EXPIRES_IN } as jwt.SignOptions
   );
 
   return { accessToken, refreshToken };

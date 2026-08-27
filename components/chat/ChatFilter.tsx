@@ -7,7 +7,7 @@ interface ChatFilterProps {
 }
 
 export function ChatFilter({ activeFilter, onChange }: ChatFilterProps) {
-  const filters = [
+  const filters: { id: ChatFilterProps['activeFilter']; label: string }[] = [
     { id: 'all', label: 'Все' },
     { id: 'direct', label: 'Личные' },
     { id: 'groups', label: 'Группы' },

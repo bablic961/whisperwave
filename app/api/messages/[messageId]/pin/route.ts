@@ -7,6 +7,13 @@ export async function POST(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const messageId = searchParams.get('messageId');
 
+    if (!messageId) {
+      return NextResponse.json(
+        { error: { code: 'MISSING_MESSAGE_ID', message: 'Не указан ID сообщения' } },
+        { status: 400 }
+      );
+    }
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return NextResponse.json(
@@ -67,6 +74,13 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const messageId = searchParams.get('messageId');
+
+    if (!messageId) {
+      return NextResponse.json(
+        { error: { code: 'MISSING_MESSAGE_ID', message: 'Не указан ID сообщения' } },
+        { status: 400 }
+      );
+    }
 
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {

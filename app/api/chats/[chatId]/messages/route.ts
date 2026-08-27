@@ -100,15 +100,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!chatId) {
+      return NextResponse.json(
+        { error: { code: 'MISSING_CHAT_ID', message: 'Не указан ID чата' } },
+        { status: 400 }
+      );
+    }
+
     const message = await prisma.message.create({
       data: {
-        chatId,
-        senderId: userId,
+        chatId: chatId || '',
+        senderId: userId || '',
         type: mediaUrl ? 'IMAGE' : 'TEXT',
         content: content || '',
-        mediaUrl,
-        mediaType,
-        mediaName,
+        mediaUrl: mediaUrl || undefined,
+        mediaType: mediaType || undefined,
+        mediaName: mediaName || undefined,
         status: 'SENT',
       },
       include: {
