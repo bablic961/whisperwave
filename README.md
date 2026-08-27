@@ -1,36 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WhisperWave - Secure Messaging Platform
+
+WhisperWave - это современный мессенджер с философией "цифрового океана". Каждое сообщение - это волна, достигающая собеседника с мгновенной доставкой.
+
+## Features
+
+- 🔒 Энд-кенд шифрование сообщений
+- ⚡ Мгновенная доставка (< 100ms)
+- 📱 Кроссплатформенность (Web + PWA)
+- 👥 Личные чаты и групповые беседы
+- 🎨 Океанический дизайн-система
+- 🌐 Реальное время (WebSocket)
+- 📤 Обмен медиа-контентом
+
+## Tech Stack
+
+### Frontend
+- Next.js 14+ (App Router)
+- TypeScript
+- Tailwind CSS
+- React Query
+
+### Backend
+- Next.js API Routes
+- Prisma ORM
+- PostgreSQL
+- Socket.io for WebSockets
+
+### Deployment
+- Vercel
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+
+- PostgreSQL
+- Redis (optional, for caching)
+
+### Installation
+
+1. Clone the repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/whisperwave.git
+cd whisperwave
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables
+```bash
+cp .env.local.example .env.local
+# Edit .env.local with your configuration
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Run database migrations
+```bash
+npx prisma migrate dev
+```
 
-## Learn More
+5. Start development server
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+whisperwave/
+├── app/                  # Next.js App Router
+│   ├── (auth)/          # Authentication pages
+│   ├── chat/            # Chat functionality
+│   ├── contacts/        # Contact management
+│   └── groups/          # Group management
+├── components/          # React components
+│   ├── ui/              # Reusable UI components
+│   ├── chat/            # Chat-specific components
+│   ├── shared/          # Shared utilities
+│   └── providers/       # Context providers
+├── lib/                 # Shared utilities
+│   ├── auth.ts          # Authentication
+│   ├── prisma.ts        # Database client
+│   ├── socket.ts        # WebSocket setup
+│   └── utils/           # Utility functions
+├── prisma/              # Database schema
+└── vercel.json          # Vercel configuration
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API Documentation
 
-## Deploy on Vercel
+See the API routes in `app/api/` for full documentation.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+- `POST /api/auth/logout` - Logout user
+- `POST /api/auth/refresh` - Refresh tokens
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Users
+- `GET /api/users` - Get current user
+- `PUT /api/users` - Update profile
+- `GET /api/users/search` - Search users
+- `POST /api/users/status` - Update status
+
+### Chats
+- `GET /api/chats` - List chats
+- `POST /api/chats` - Create chat
+- `GET /api/chats/:id` - Get chat details
+- `POST /api/chats/:id/messages` - Send message
+
+## Deployment
+
+This project is configured for deployment on Vercel.
+
+```bash
+vercel
+```
+
+## License
+
+MIT License

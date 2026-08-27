@@ -1,0 +1,11 @@
+/* eslint-env node */
+module.exports = {
+  extends: ['next/core-web-vitals', 'next/typescript'],
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/no-unused-vars': 'warn',
+    'no-console': 'warn',
+    'prefer-const': 'warn',
+  },
+  ignorePatterns: ['.next/', 'out/', 'node_modules/'],
+};
