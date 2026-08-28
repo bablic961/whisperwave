@@ -2,10 +2,11 @@
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { env } from '@/lib/env';
 
-export const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-export const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-export const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || '30d';
+export const JWT_SECRET = env.JWT_SECRET;
+export const JWT_EXPIRES_IN = env.JWT_EXPIRES_IN;
+export const REFRESH_TOKEN_EXPIRES_IN = env.REFRESH_TOKEN_EXPIRES_IN;
 
 export interface JwtPayload {
   userId: string;
