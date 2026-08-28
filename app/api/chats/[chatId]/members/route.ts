@@ -1,6 +1,7 @@
 // app/api/chats/[chatId]/members/route.ts - Manage chat members
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAccessTokenFromCookie, verifyToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,19 +11,35 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userIds } = body;
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     // Check if user is admin/owner
     const userMember = await prisma.chatMember.findFirst({
-      where: { chatId: chatId || '', userId: userId || '' },
+      where: { chatId, userId: decoded.userId },
     });
 
     if (!userMember || !['owner', 'admin'].includes(userMember.role)) {
@@ -59,18 +76,34 @@ export async function DELETE(request: NextRequest) {
     const chatId = searchParams.get('chatId');
     const memberId = searchParams.get('userId');
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     // Can't remove owner
-    if (memberId === userId) {
+    if (memberId === decoded.userId) {
       return NextResponse.json(
         { error: { code: 'CANNOT_REMOVE_OWNER', message: 'Нельзя удалить себя' } },
         { status: 400 }

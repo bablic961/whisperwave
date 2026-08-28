@@ -1,6 +1,7 @@
 // app/api/messages/[messageId]/reactions/route.ts - Message reactions
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAccessTokenFromCookie, verifyToken } from '@/lib/auth';
 
 const VALID_REACTION_TYPES = ['LIKE', 'LOVE', 'HAHA', 'WOW', 'SAD', 'ANGRY', 'CELEBRATE', 'THINKING', 'CRYING', 'CLAPPING'];
 
@@ -26,19 +27,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     // Check if reaction already exists
     const existingReaction = await prisma.reaction.findFirst({
-      where: { messageId: messageId, userId, type: type as any },
+      where: { messageId, userId: decoded.userId, type: type as any },
     });
 
     if (existingReaction) {
@@ -51,7 +68,7 @@ export async function POST(request: NextRequest) {
     const reaction = await prisma.reaction.create({
       data: {
         messageId,
-        userId,
+        userId: decoded.userId,
         type: type as any,
       },
     });
@@ -96,19 +113,35 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     const reaction = await prisma.reaction.delete({
       where: {
-        messageId_userId_type: { messageId, userId, type: type as any },
+        messageId_userId_type: { messageId, userId: decoded.userId, type: type as any },
       },
     });
 

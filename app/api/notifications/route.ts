@@ -1,6 +1,7 @@
 // app/api/notifications/route.ts - Notifications
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAccessTokenFromCookie, verifyToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,25 +9,41 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     const notifications = await prisma.notification.findMany({
-      where: { userId },
+      where: { userId: decoded.userId },
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: (page - 1) * limit,
     });
 
     const total = await prisma.notification.count({
-      where: { userId },
+      where: { userId: decoded.userId },
     });
 
     return NextResponse.json({
@@ -49,19 +66,35 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { type, title, body: notificationBody, data } = body;
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     const notification = await prisma.notification.create({
       data: {
-        userId,
+        userId: decoded.userId,
         type,
         title,
         body: notificationBody,

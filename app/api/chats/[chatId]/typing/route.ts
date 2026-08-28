@@ -1,5 +1,6 @@
 // app/api/chats/[chatId]/typing/route.ts - Typing indicator
 import { NextRequest, NextResponse } from 'next/server';
+import { getAccessTokenFromCookie, verifyToken } from '@/lib/auth';
 
 // In-memory typing state (in production, use Redis)
 interface TypingUser {
@@ -20,28 +21,44 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { isTyping } = body;
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     if (chatId) {
       if (typingState[chatId]) {
         if (isTyping) {
-          typingState[chatId][userId] = {
+          typingState[chatId][decoded.userId] = {
             expiresAt: Date.now() + 5000, // 5 seconds
           };
         } else {
-          delete typingState[chatId][userId];
+          delete typingState[chatId][decoded.userId];
         }
       } else if (isTyping) {
         typingState[chatId] = {
-          [userId]: { expiresAt: Date.now() + 5000 },
+          [decoded.userId]: { expiresAt: Date.now() + 5000 },
         };
       }
     }

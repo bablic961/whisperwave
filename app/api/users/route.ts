@@ -1,23 +1,38 @@
 // app/api/users/route.ts - Get current user
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAccessTokenFromCookie, verifyToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    // In production, validate JWT token here
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    // Extract user ID from token (simplified)
-    const userId = 'current-user-id'; // In production, decode from JWT
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: decoded.userId },
       select: {
         id: true,
         email: true,
@@ -60,18 +75,34 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { username, avatar, bio, customStatus, theme, locale } = body;
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     const user = await prisma.user.update({
-      where: { id: userId },
+      where: { id: decoded.userId },
       data: {
         username,
         avatar,

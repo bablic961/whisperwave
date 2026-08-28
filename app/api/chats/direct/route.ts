@@ -1,28 +1,45 @@
 // app/api/chats/direct/route.ts - Get/create direct chat
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAccessTokenFromCookie, verifyToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { userId } = body;
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const currentUserId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     // Check if direct chat already exists
     const existingChat = await prisma.chat.findFirst({
       where: {
         type: 'DIRECT',
         members: {
-          some: { userId: currentUserId },
+          some: { userId: decoded.userId },
         },
         AND: {
           members: { some: { userId } },
@@ -46,7 +63,7 @@ export async function POST(request: NextRequest) {
         lastMessageAt: new Date(),
         members: {
           create: [
-            { userId: currentUserId, role: 'member', joinedAt: new Date() },
+            { userId: decoded.userId, role: 'member', joinedAt: new Date() },
             { userId, role: 'member', joinedAt: new Date() },
           ],
         },

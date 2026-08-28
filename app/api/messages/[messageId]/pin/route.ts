@@ -1,6 +1,7 @@
 // app/api/messages/[messageId]/pin/route.ts - Pin/unpin messages
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAccessTokenFromCookie, verifyToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,15 +15,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     // Check if user is chat admin
     const message = await prisma.message.findUnique({
@@ -40,7 +57,7 @@ export async function POST(request: NextRequest) {
     const userMember = await prisma.chatMember.findFirst({
       where: {
         chatId: message.chatId,
-        userId,
+        userId: decoded.userId,
         role: { in: ['owner', 'admin'] },
       },
     });
@@ -56,7 +73,7 @@ export async function POST(request: NextRequest) {
       where: { id: messageId },
       data: {
         pinnedAt: new Date(),
-        pinnedBy: userId,
+        pinnedBy: decoded.userId,
       },
     });
 
@@ -82,15 +99,31 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     // Check if user is chat admin
     const message = await prisma.message.findUnique({
@@ -108,7 +141,7 @@ export async function DELETE(request: NextRequest) {
     const userMember = await prisma.chatMember.findFirst({
       where: {
         chatId: message.chatId,
-        userId,
+        userId: decoded.userId,
         role: { in: ['owner', 'admin'] },
       },
     });

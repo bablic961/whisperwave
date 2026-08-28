@@ -2,23 +2,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateInviteCode } from '@/lib/utils/string';
+import { getAccessTokenFromCookie, verifyToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     const chats = await prisma.chat.findMany({
       where: {
         members: {
-          some: { userId },
+          some: { userId: decoded.userId },
         },
       },
       include: {
@@ -48,15 +65,31 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { type, name, memberIds, avatar, isEncrypted } = body;
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
 
     const inviteCode = generateInviteCode(8);
 
@@ -72,7 +105,7 @@ export async function POST(request: NextRequest) {
         members: {
           create: memberIds.map((id: string) => ({
             userId: id,
-            role: id === userId ? 'owner' : 'member',
+            role: id === decoded.userId ? 'owner' : 'member',
             joinedAt: new Date(),
           })),
         },

@@ -1,6 +1,7 @@
 // app/api/chats/[chatId]/messages/route.ts - Messages
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAccessTokenFromCookie, verifyToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,6 +14,44 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: { code: 'MISSING_CHAT_ID', message: 'Не указан ID чата' } },
         { status: 400 }
+      );
+    }
+
+    // Try to get token from Authorization header or cookies
+    const authHeader = request.headers.get('authorization');
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
+      return NextResponse.json(
+        { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
+        { status: 401 }
+      );
+    }
+
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is in chat
+    const chatMember = await prisma.chatMember.findFirst({
+      where: { chatId, userId: decoded.userId },
+    });
+
+    if (!chatMember) {
+      return NextResponse.json(
+        { error: { code: 'NOT_MEMBER', message: 'Вы не являетесь участником этого чата' } },
+        { status: 403 }
       );
     }
 
@@ -78,25 +117,29 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { content, replyToId, mediaUrl, mediaType, mediaName } = body;
 
+    // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      token = await getAccessTokenFromCookie();
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Требуется авторизация' } },
         { status: 401 }
       );
     }
 
-    const userId = 'current-user-id';
-
-    // Check if user is in chat
-    const chatMember = await prisma.chatMember.findFirst({
-      where: { chatId: chatId || '', userId: userId || '' },
-    });
-
-    if (!chatMember) {
+    // Decode token to get user ID
+    const decoded = verifyToken(token);
+    if (!decoded) {
       return NextResponse.json(
-        { error: { code: 'NOT_MEMBER', message: 'Вы не являетесь участником этого чата' } },
-        { status: 403 }
+        { error: { code: 'INVALID_TOKEN', message: 'Неверный токен' } },
+        { status: 401 }
       );
     }
 
@@ -107,10 +150,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user is in chat
+    const chatMember = await prisma.chatMember.findFirst({
+      where: { chatId, userId: decoded.userId },
+    });
+
+    if (!chatMember) {
+      return NextResponse.json(
+        { error: { code: 'NOT_MEMBER', message: 'Вы не являетесь участником этого чата' } },
+        { status: 403 }
+      );
+    }
+
     const message = await prisma.message.create({
       data: {
-        chatId: chatId || '',
-        senderId: userId || '',
+        chatId,
+        senderId: decoded.userId,
         type: mediaUrl ? 'IMAGE' : 'TEXT',
         content: content || '',
         mediaUrl: mediaUrl || undefined,
