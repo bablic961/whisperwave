@@ -1,5 +1,6 @@
 // components/shared/StatusIndicator.tsx
-import { UserStatus } from '@prisma/client';
+
+type UserStatus = 'ONLINE' | 'OFFLINE' | 'AWAY' | 'DO_NOT_DISTURB' | 'INVISIBLE';
 
 interface StatusIndicatorProps {
   status: UserStatus | string;
