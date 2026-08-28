@@ -1,5 +1,4 @@
 // lib/logger.ts - Logging Utility
-import { format, transports, createLogger, addColorize, addTimestamp } from 'bunyan';
 
 const logLevels = {
   trace: 10,
