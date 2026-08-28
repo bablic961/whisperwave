@@ -1,17 +1,14 @@
 // lib/socket.ts - Socket.io Setup
 import { Server as SocketIOServer } from 'socket.io';
-import { NextApiResponse, NextApiRequest } from 'next';
-import { createServer, Server as HttpServer } from 'http';
+import { type NextRequest } from 'next/server';
+import { type Server as HttpServer } from 'http';
 
-declare module 'next' {
-  interface NextApiRequest {
-    socket: any;
-  }
-}
+type IncomingMessage = any;
+type ServerResponse = any;
 
 let io: SocketIOServer | null = null;
 
-export function getSocketIO(app: HttpServer<NextApiRequest, NextApiResponse>): SocketIOServer {
+export function getSocketIO(app: HttpServer<IncomingMessage, ServerResponse>): SocketIOServer {
   if (!io) {
     io = new SocketIOServer(app, {
       cors: {
@@ -109,7 +106,7 @@ function setupSocketEvents(io: SocketIOServer) {
   });
 }
 
-export function setupSocketAPI(app: HttpServer<NextApiRequest, NextApiResponse>) {
+export function setupSocketAPI(app: HttpServer<IncomingMessage, ServerResponse>) {
   const io = getSocketIO(app);
 
   return {
