@@ -1,8 +1,9 @@
 // components/chat/ChatSidebar.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../providers/AuthProvider';
+import Link from 'next/link';
 
 interface Chat {
   id: string;
@@ -47,10 +48,12 @@ export function ChatSidebar({ chats, activeChatId, onChatSelect, onSearch }: Cha
   const [searchQuery, setSearchQuery] = useState('');
   const { user } = useAuth();
 
-  const filteredChats = chats.filter((chat) =>
-    chat.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (chat.lastMessage?.content.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-  );
+  // Fix: Properly handle null/undefined in search filter
+  const filteredChats = chats.filter((chat) => {
+    const nameMatch = chat.name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false;
+    const messageMatch = chat.lastMessage?.content.toLowerCase().includes(searchQuery.toLowerCase()) ?? false;
+    return nameMatch || messageMatch;
+  });
 
   return (
     <aside className="flex w-80 flex-col border-r border-white/10 bg-[#1A1F3D]">

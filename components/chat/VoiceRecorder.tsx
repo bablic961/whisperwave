@@ -1,23 +1,53 @@
 // components/chat/VoiceRecorder.tsx
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 
 interface VoiceRecorderProps {
-  onRecordComplete: (audioUrl: string, duration: number) => void;
+  onRecordComplete: (audioUrl: string, duration: number, audioBlob: Blob) => void;
 }
 
 export function VoiceRecorder({ onRecordComplete }: VoiceRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [recordingPermission, setRecordingPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    // Check for microphone permission on mount
+    const checkPermission = async () => {
+      try {
+        const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        setRecordingPermission(permission.state);
+
+        permission.onchange = () => {
+          setRecordingPermission(permission.state);
+        };
+      } catch (error) {
+        console.error('Permission check error:', error);
+      }
+    };
+
+    checkPermission();
+  }, []);
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Request permission if not granted
+      if (recordingPermission !== 'granted') {
+        try {
+          streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
+          console.error('Microphone access denied:', err);
+          return;
+        }
+      }
+
+      const stream = streamRef.current || await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -31,10 +61,13 @@ export function VoiceRecorder({ onRecordComplete }: VoiceRecorderProps) {
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const audioUrl = URL.createObjectURL(audioBlob);
-        onRecordComplete(audioUrl, duration);
+        onRecordComplete(audioUrl, duration, audioBlob);
+
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(1000);
       setIsRecording(true);
       setDuration(0);
 
@@ -43,6 +76,7 @@ export function VoiceRecorder({ onRecordComplete }: VoiceRecorderProps) {
       }, 1000);
     } catch (error) {
       console.error('Recording error:', error);
+      setRecordingPermission('denied');
     }
   };
 
@@ -56,17 +90,31 @@ export function VoiceRecorder({ onRecordComplete }: VoiceRecorderProps) {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
   return (
     <div className="flex items-center space-x-2">
       <Button
         onClick={isRecording ? stopRecording : startRecording}
         variant={isRecording ? 'danger' : 'ghost'}
-        className="rounded-full p-2"
+        className={`rounded-full p-3 transition-colors ${
+          isRecording ? 'bg-red-500/20 hover:bg-red-500/30' : 'hover:bg-white/10'
+        }`}
       >
         {isRecording ? (
-          <div className="flex items-center space-x-1">
-            <span className="h-3 w-3 rounded-full bg-white animate-pulse" />
-            <span>00:{duration.toString().padStart(2, '0')}</span>
+          <div className="flex items-center space-x-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+            </span>
+            <span className="font-mono text-sm">{duration.toString().padStart(2, '0')}</span>
           </div>
         ) : (
           <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

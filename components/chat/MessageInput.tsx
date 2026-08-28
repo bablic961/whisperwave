@@ -4,6 +4,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { EmojiPicker } from './EmojiPicker';
 import { FileUploader } from './FileUploader';
+import { VoiceRecorder } from './VoiceRecorder';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => void;
@@ -15,6 +16,7 @@ export function MessageInput({ onSendMessage, onUpload, isTyping }: MessageInput
   const [content, setContent] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isAttached, setIsAttached] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSendMessage = () => {
@@ -23,6 +25,7 @@ export function MessageInput({ onSendMessage, onUpload, isTyping }: MessageInput
     onSendMessage(content);
     setContent('');
     inputRef.current?.focus();
+    setIsAttached(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -39,6 +42,13 @@ export function MessageInput({ onSendMessage, onUpload, isTyping }: MessageInput
   const handleFileUpload = (file: File) => {
     onUpload(file);
     setIsAttached(false);
+  };
+
+  const handleVoiceRecordComplete = (audioUrl: string, duration: number, audioBlob: Blob) => {
+    setIsRecording(false);
+    // Convert blob to file for upload
+    const audioFile = new File([audioBlob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
+    onUpload(audioFile);
   };
 
   return (
@@ -63,6 +73,8 @@ export function MessageInput({ onSendMessage, onUpload, isTyping }: MessageInput
         </div>
 
         <div className="flex items-center space-x-1">
+          <VoiceRecorder onRecordComplete={handleVoiceRecordComplete} />
+
           <button
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             className="rounded-full p-2 text-[#A0AEC0] hover:bg-white/10 hover:text-white transition-colors"
@@ -75,7 +87,7 @@ export function MessageInput({ onSendMessage, onUpload, isTyping }: MessageInput
           <button
             onClick={handleSendMessage}
             disabled={!content.trim()}
-            className="rounded-full bg-gradient-to-r from-[#00D4FF] to-[#7C3AED] px-4 py-2 text-white transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
+            className="rounded-full bg-gradient-to-r from-[#00D4FF] to-[#7C3AED] px-4 py-2 text-white transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

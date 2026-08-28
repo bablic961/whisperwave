@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useAuth } from '../providers/AuthProvider';
 
 function formatTimeAgo(date: Date | string): string {
   const d = new Date(date);
@@ -51,6 +52,7 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   const handleReaction = (emoji: string) => {
     onReaction(message.id, emoji);
@@ -121,8 +123,8 @@ export function MessageBubble({
       {isOwn && showSender && (
         <div className="ml-3 flex-shrink-0">
           <img
-            src="/my-avatar.png"
-            alt="Меня"
+            src={user?.avatar || '/avatar-placeholder.png'}
+            alt={user?.username || 'Я'}
             className="h-8 w-8 rounded-full object-cover"
           />
         </div>

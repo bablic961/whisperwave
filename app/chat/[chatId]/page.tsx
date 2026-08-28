@@ -34,35 +34,53 @@ export default function ChatPage({ params }: { params: { chatId: string } }) {
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [chatName, setChatName] = useState('');
   const [membersCount, setMembersCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Fetch messages and chat details
     const fetchChatData = async () => {
-      const [messagesRes, chatRes] = await Promise.all([
-        fetch(`/api/chats/${params.chatId}/messages`),
-        fetch(`/api/chats/${params.chatId}`),
-      ]);
+      setIsLoading(true);
+      try {
+        const [messagesRes, chatRes] = await Promise.all([
+          fetch(`/api/chats/${params.chatId}/messages`),
+          fetch(`/api/chats/${params.chatId}`),
+        ]);
 
-      const messagesData = await messagesRes.json();
-      const chatData = await chatRes.json();
+        if (messagesRes.ok && chatRes.ok) {
+          const messagesData = await messagesRes.json();
+          const chatData = await chatRes.json();
 
-      setMessages(messagesData.messages || []);
-      setChatName(chatData.chat.name || 'Чат');
-      setMembersCount(chatData.chat.members?.length || 0);
+          setMessages(messagesData.messages || []);
+          setChatName(chatData.chat.name || 'Чат');
+          setMembersCount(chatData.chat.members?.length || 0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch chat data:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchChatData();
   }, [params.chatId]);
 
   const handleSendMessage = async (content: string) => {
-    const response = await fetch(`/api/chats/${params.chatId}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    });
+    try {
+      const response = await fetch(`/api/chats/${params.chatId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
 
-    const newMessage = await response.json();
-    setMessages((prev) => [...prev, newMessage.message]);
+      if (response.ok) {
+        const newMessage = await response.json();
+        setMessages((prev) => [...prev, newMessage.message]);
+      } else {
+        console.error('Failed to send message:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   };
 
   const handleUpload = async (file: File) => {

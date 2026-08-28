@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AuthProvider } from '@/components/providers/AuthProvider';
+import { NotificationProvider } from '@/components/shared/NotificationProvider';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'] });
 
@@ -52,7 +53,9 @@ export default function RootLayout({
     <html lang="ru" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <NotificationProvider>{children}</NotificationProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

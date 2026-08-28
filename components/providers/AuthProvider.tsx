@@ -23,6 +23,7 @@ interface AuthContextType {
   login: (tokens: { accessToken: string; refreshToken: string }, user: User) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  uploadAvatar: (file: File) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,13 +81,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!accessToken) return;
 
     try {
-      const response = await fetch('/api/users');
+      const response = await fetch('/api/users', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
       }
     } catch (error) {
       console.error('Failed to refresh user:', error);
+    }
+  };
+
+  const uploadAvatar = async (file: File) => {
+    if (!accessToken) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload/avatar', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.avatar) {
+          setUser((prev) => (prev ? { ...prev, avatar: data.avatar } : null));
+          localStorage.setItem('user', JSON.stringify({ ...user, avatar: data.avatar }));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to upload avatar:', error);
     }
   };
 
@@ -99,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     refreshUser,
+    uploadAvatar,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
