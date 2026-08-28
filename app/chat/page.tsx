@@ -1,5 +1,5 @@
 // app/chat/page.tsx - Chat list page
-import { ChatSidebar } from '@/components/chat/ChatSidebar';
+import { ChatSidebarClient } from '@/components/chat/ChatSidebarClient';
 
 interface Chat {
   id: string;
@@ -50,19 +50,9 @@ export default function ChatListPage() {
     },
   ];
 
-  const handleChatSelect = (chatId: string) => {
-    // Navigate to chat
-    console.log('Selected chat:', chatId);
-  };
-
-  const handleSearch = (query: string) => {
-    // Filter chats
-    console.log('Search query:', query);
-  };
-
   return (
     <div className="flex h-screen overflow-hidden">
-      <ChatSidebar chats={chats} onChatSelect={handleChatSelect} onSearch={handleSearch} />
+      <ChatSidebarClient chats={chats} />
     </div>
   );
 }
