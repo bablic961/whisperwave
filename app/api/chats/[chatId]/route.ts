@@ -60,6 +60,13 @@ export async function PUT(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const chatId = searchParams.get('chatId');
 
+    if (!chatId) {
+      return NextResponse.json(
+        { error: { code: 'MISSING_CHAT_ID', message: 'Не указан ID чата' } },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { name, description, avatar, coverImage, settings } = body;
 
@@ -126,6 +133,13 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const chatId = searchParams.get('chatId');
+
+    if (!chatId) {
+      return NextResponse.json(
+        { error: { code: 'MISSING_CHAT_ID', message: 'Не указан ID чата' } },
+        { status: 400 }
+      );
+    }
 
     // Try to get token from Authorization header or cookies
     const authHeader = request.headers.get('authorization');

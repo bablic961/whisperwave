@@ -8,6 +8,13 @@ export async function POST(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const chatId = searchParams.get('chatId');
 
+    if (!chatId) {
+      return NextResponse.json(
+        { error: { code: 'MISSING_CHAT_ID', message: 'Не указан ID чата' } },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { userIds } = body;
 
