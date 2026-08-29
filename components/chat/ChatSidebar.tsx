@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../providers/AuthProvider';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 interface Chat {
@@ -21,11 +22,23 @@ interface Chat {
   lastMessageAt: string;
 }
 
+interface User {
+  id: string;
+  username: string;
+  avatar?: string;
+}
+
 interface ChatSidebarProps {
   chats: Chat[];
   activeChatId?: string;
   onChatSelect: (chatId: string) => void;
   onSearch: (query: string) => void;
+  searchUserQuery?: string;
+  setSearchUserQuery?: (query: string) => void;
+  isSearchingUser?: boolean;
+  setIsSearchingUser?: (value: boolean) => void;
+  searchResults?: User[];
+  onUserSelect?: (user: User) => void;
 }
 
 function formatTimeAgo(date: Date | string): string {
@@ -44,9 +57,10 @@ function formatTimeAgo(date: Date | string): string {
   return d.toLocaleDateString('ru-RU');
 }
 
-export function ChatSidebar({ chats, activeChatId, onChatSelect, onSearch }: ChatSidebarProps) {
+export function ChatSidebar({ chats, activeChatId, onChatSelect, onSearch, searchUserQuery, setSearchUserQuery, isSearchingUser, setIsSearchingUser, searchResults, onUserSelect }: ChatSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const { user } = useAuth();
+  const router = useRouter();
 
   // Fix: Properly handle null/undefined in search filter
   const filteredChats = chats.filter((chat) => {
@@ -54,6 +68,23 @@ export function ChatSidebar({ chats, activeChatId, onChatSelect, onSearch }: Cha
     const messageMatch = chat.lastMessage?.content.toLowerCase().includes(searchQuery.toLowerCase()) ?? false;
     return nameMatch || messageMatch;
   });
+
+  const handleCreateDirectChat = async (userId: string, username: string) => {
+    try {
+      const response = await fetch('/api/chats/direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        router.push(`/chat/${data.chat.id}`);
+      }
+    } catch (error) {
+      console.error('Create chat error:', error);
+    }
+  };
 
   return (
     <aside className="flex w-80 flex-col border-r border-white/10 bg-[#1A1F3D]">
@@ -141,6 +172,42 @@ export function ChatSidebar({ chats, activeChatId, onChatSelect, onSearch }: Cha
         )}
       </div>
 
+      {/* Search users */}
+      {isSearchingUser && searchResults && (
+        <div className="border-t border-white/10 p-4 bg-[#1A1F3D]">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-white">Найденные пользователи</h3>
+            <button onClick={() => setIsSearchingUser?.(false)} className="text-xs text-[#A0AEC0] hover:text-white">
+              Закрыть
+            </button>
+          </div>
+          <div className="space-y-2">
+            {searchResults.map((u) => (
+              <button
+                key={u.id}
+                onClick={() => {
+                  onUserSelect?.(u);
+                  handleCreateDirectChat(u.id, u.username);
+                }}
+                className="w-full flex items-center space-x-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+              >
+                <img
+                  src={u.avatar || '/avatar-placeholder.png'}
+                  alt={u.username}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white">{u.username}</p>
+                </div>
+                <svg className="h-4 w-4 text-[#718096]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* User info */}
       <div className="border-t border-white/10 p-4">
         <div className="flex items-center space-x-3">
@@ -158,12 +225,23 @@ export function ChatSidebar({ chats, activeChatId, onChatSelect, onSearch }: Cha
             <p className="truncate text-xs text-[#718096]">{user?.email}</p>
           </div>
 
-          <button className="rounded-full p-1.5 text-[#A0AEC0] hover:bg-white/10">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={() => setIsSearchingUser?.(true)}
+              className="rounded-full p-1.5 text-[#A0AEC0] hover:bg-white/10 hover:text-white transition-colors"
+              title="Найти пользователя"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+            <button className="rounded-full p-1.5 text-[#A0AEC0] hover:bg-white/10 transition-colors">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </aside>
